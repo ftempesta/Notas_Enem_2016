@@ -40,8 +40,10 @@ null_columns_filtered = null_columns[null_columns['Percent nan'] > 50]
 columns_correct = null_columns_filtered['columnas'].to_list()
 dataset_filtered = dataset[columns_correct]
 
-
+# dataset filtrado con los nan's
 dataset_filtered = dataset_filtered.dropna()
+
+# Tratamiento de los categoricos
 
 
 
