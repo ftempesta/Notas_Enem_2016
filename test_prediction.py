@@ -65,7 +65,6 @@ categorical_columns =\
 dataset = LaberEncoder(dataset, categorical_columns)
 
 
-
 # ============================================================
 # Basic linear regression
 # ============================================================
@@ -75,7 +74,7 @@ y = target["NU_NOTA_MT"]
 
 X = sm.add_constant(X)
 
-model = sm.OLS(Y, X).fit()
+model = sm.OLS(y, X).fit()
 predictions = model.predict(X.asfloat) 
 
 
@@ -91,9 +90,9 @@ print(print_model)
 
 
 
-# Aplicar PCA para encontrar componentes principales
-pca = PCA(n_components=100)
-principalComponents = pca.fit_transform(x)
+# # Aplicar PCA para encontrar componentes principales
+# pca = PCA(n_components=100)
+# principalComponents = pca.fit_transform(x)
 
 
 
