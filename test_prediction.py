@@ -1,58 +1,62 @@
-
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.decomposition import PCA
 
 # ============================================================
 # Explorar datos
 # ============================================================
 
-# Cargar los datos
+# Load_data
 dataset = pd.read_csv("testfiles/train.csv", index_col=0)
 
-# 
+# Describe
 dims = dataset.shape
 describe = dataset.describe()
 
-# Eliminar valores nulos
+# Drop rows with nan values in the NU_NOTA_MT column
 nulos = dataset.isnull()
 conteo_nulos = nulos["NU_NOTA_MT"].value_counts()
 dataset = dataset.dropna(subset=["NU_NOTA_MT"]).reset_index(drop=True)
+
+# Count nan values by columns
+null_columns =\
+    pd.DataFrame(dataset.isnull().sum(axis=0)).reset_index(drop=False)
+null_columns.columns = ['columns', 'count_nan_values']
+
+# Calculated percentage of NON null values 
+sum_values = dataset.shape[0]
+null_columns['percentage_non_nan'] =\
+    (1 - (null_columns['count_nan_values'] / sum_values)) * 100
+
+# Select only the columns with less than 50 % of nan's values
+null_columns_filtered = null_columns[null_columns['percentage_non_nan'] > 50]
+columns_correct = null_columns_filtered['columns'].to_list()
+
+# Filter dataset
+dataset_filtered = dataset[columns_correct]
+
+# Filtered dataset with the columns selected before 
+dataset = dataset_filtered.dropna()
 
 # Seleccionar columnas categoricas
 categorical_columns =\
     dataset.select_dtypes(include=['object']).columns.to_list()
 categorical_columns.remove("NU_INSCRICAO")
 
-# Contar valores nan en las columnas y seleccionar aquellas que tienen más de 
-# un 75 % de los datos
-null_columns =\
-    pd.DataFrame(dataset.isnull().sum(axis=0)).reset_index(drop=False)
-null_columns.columns = ['columnas', 'Conteo valores nan']
-
-total_valores = dataset.shape[0]
-null_columns['Percent nan'] =\
-    (1 - (null_columns['Conteo valores nan'] / total_valores)) * 100
-
-null_columns_filtered = null_columns[null_columns['Percent nan'] > 50]
-columns_correct = null_columns_filtered['columnas'].to_list()
-dataset_filtered = dataset[columns_correct]
-
-# dataset filtrado con los nan's
-dataset_filtered = dataset_filtered.dropna()
 
 # Tratamiento de los categoricos
+enc = OneHotEncoder(handle_unknown='ignore')
+enc_dataset =\
+    pd.DataFrame(enc.fit_transform(dataset).toarray())
 
 
+# Aplicar PCA para encontrar componentes principales
+pca = PCA(n_components=100)
+principalComponents = pca.fit_transform(x)
 
-
-# enc = OneHotEncoder(handle_unknown='ignore')
-# enc_dataset =\
-#     pd.DataFrame(enc.fit_transform(dataset[categorical_columns]).toarray())
-
-# dataset = dataset.join(enc_dataset)
 
 
 
