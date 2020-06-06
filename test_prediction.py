@@ -2,8 +2,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from sklearn.preprocessing import OneHotEncoder
+import statsmodels.api as sm
+
 from sklearn.decomposition import PCA
+
+from codenation_library import *
 
 # ============================================================
 # Explorar datos
@@ -16,9 +19,12 @@ dataset = pd.read_csv("testfiles/train.csv", index_col=0)
 dims = dataset.shape
 describe = dataset.describe()
 
+# ============================================================
+# Eliminete NaN
+# ============================================================
+
 # Drop rows with nan values in the NU_NOTA_MT column
-nulos = dataset.isnull()
-conteo_nulos = nulos["NU_NOTA_MT"].value_counts()
+nulos = dataset.isnull()["NU_NOTA_MT"].value_counts()
 dataset = dataset.dropna(subset=["NU_NOTA_MT"]).reset_index(drop=True)
 
 # Count nan values by columns
@@ -41,16 +47,48 @@ dataset_filtered = dataset[columns_correct]
 # Filtered dataset with the columns selected before 
 dataset = dataset_filtered.dropna()
 
+# ============================================================
+# Transform categorical to numeric
+# ============================================================
+
+# Target: inscription number and score math test
+target = dataset[["NU_INSCRICAO","NU_NOTA_MT"]]
+
+dataset = dataset.drop(columns=["NU_INSCRICAO","NU_NOTA_MT"])
+
+
 # Seleccionar columnas categoricas
 categorical_columns =\
     dataset.select_dtypes(include=['object']).columns.to_list()
-categorical_columns.remove("NU_INSCRICAO")
+
+# Apply laber encoder to categorical columns
+dataset = LaberEncoder(dataset, categorical_columns)
 
 
-# Tratamiento de los categoricos
-enc = OneHotEncoder(handle_unknown='ignore')
-enc_dataset =\
-    pd.DataFrame(enc.fit_transform(dataset).toarray())
+
+# ============================================================
+# Basic linear regression
+# ============================================================
+
+X = dataset
+y = target["NU_NOTA_MT"]
+
+X = sm.add_constant(X)
+
+model = sm.OLS(Y, X).fit()
+predictions = model.predict(X.asfloat) 
+
+
+print_model = model.summary()
+print(print_model)
+
+
+
+
+
+
+
+
 
 
 # Aplicar PCA para encontrar componentes principales
