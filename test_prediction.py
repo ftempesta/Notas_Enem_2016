@@ -2,9 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import statsmodels.api as sm
-
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+import xgboost
+import numpy as np
+
 
 from codenation_library import *
 
@@ -51,7 +54,7 @@ dataset = dataset_filtered.dropna()
 # Transform categorical to numeric
 # ============================================================
 
-# Target: inscription number and score math test
+# Target: inscription number and score math testv
 target = dataset[["NU_INSCRICAO","NU_NOTA_MT"]]
 
 dataset = dataset.drop(columns=["NU_INSCRICAO","NU_NOTA_MT"])
@@ -64,7 +67,6 @@ categorical_columns =\
 # Apply laber encoder to categorical columns
 dataset = LaberEncoder(dataset, categorical_columns)
 
-
 # ============================================================
 # Basic linear regression
 # ============================================================
@@ -72,18 +74,21 @@ dataset = LaberEncoder(dataset, categorical_columns)
 X = dataset
 y = target["NU_NOTA_MT"]
 
-X = sm.add_constant(X)
-
-model = sm.OLS(y, X).fit()
-predictions = model.predict(X.asfloat) 
-
-
-print_model = model.summary()
-print(print_model)
+# Error of the linear regression
+error_r2 =  LinearRegression(X,y)
+print(error_r2)
 
 
+# ============================================================
+# Feature importance with XGBoost
+# ============================================================
 
+# Number of steps on the boosting algorithm
+early_stopping_rounds = 200
 
+# Mean absolute error and std of mae error of xgboost algorithm
+mae_xgboost, std_xgboost, mae_acum =\
+    xgboost_processing(X,y, early_stopping_rounds)
 
 
 
