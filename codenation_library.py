@@ -21,6 +21,7 @@ import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
 from sklearn.metrics import mean_squared_error,mean_absolute_error
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping
 import keras.backend as K
 
 # Visualization
@@ -167,6 +168,7 @@ def linear_regression_processing(X_train, X_test, y_train, y_test):
     
     model = sm.OLS(y_train, X_train).fit()    
     predictions = model.predict(X_test) 
+    
 
     return predictions
 
@@ -244,11 +246,11 @@ def xgboost_processing(X_train, X_test, y_train,
                             ascending=False).reset_index(drop=True)
     
     
-    # Plot importance
-    plt.figure(figsize=(40,20))
-    plot_importance(regressor)
-    pyplot.show()
-    plt.show()
+    # # Plot importance
+    # plt.figure(figsize=(40,20))
+    # plot_importance(regressor)
+    # pyplot.show()
+    # plt.show()
 
     return  y_pred, data
 
@@ -290,6 +292,113 @@ def support_vector_machines_processing(X_train, X_test, y_train, y_test):
     return y_pred
 
 
+def neural_net_processing(X_train, X_test, y_train, y_test,
+                          batch_size, epochs, patience, min_delta):
+    """
+    
+
+    Parameters
+    ----------
+    X_train : TYPE
+        DESCRIPTION.
+    X_test : TYPE
+        DESCRIPTION.
+    y_train : TYPE
+        DESCRIPTION.
+    y_test : TYPE
+        DESCRIPTION.
+    batch_size : TYPE
+        DESCRIPTION.
+    epochs : TYPE
+        DESCRIPTION.
+    patience : TYPE
+        DESCRIPTION.
+    min_delta : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    y_pred : TYPE
+        DESCRIPTION.
+
+    """
+    
+    # Model implementation
+    model = Sequential()
+    model.add(Dense(128, input_dim=X_train.shape[1], activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.4))
+    model.add(Dense(64, activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.4))
+    model.add(Dense(32, activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Dense(1, activation='relu'))
+    model.summary()
+
+    # Compile optimizer
+    model.compile(loss='mean_squared_error', optimizer='adam')
+
+    keras.callbacks.Callback()
+
+    stop_condition = keras.callbacks.EarlyStopping(monitor='val_loss',
+                                              mode ='min',
+                                              patience=patience,
+                                              verbose=1,
+                                              min_delta=min_delta,
+                                              restore_best_weights=True)
+
+    learning_rate_schedule = ReduceLROnPlateau(monitor="val_loss",
+                                         factor=0.5,
+                                         patience=100,
+                                         verbose=1,
+                                         mode="auto",
+                                         cooldown=0,
+                                         min_lr=5E-3)
+
+    callbacks = [stop_condition, learning_rate_schedule]
+
+
+    history = model.fit(X_train, y_train,validation_split=0.1,
+                        batch_size=batch_size,
+                        epochs=epochs,
+                        shuffle=False,
+                        verbose=1,
+                        callbacks=callbacks)
+
+    # Hist training 
+    fig,ax = plt.subplots(1,figsize=(16, 8))
+    ax.plot(history.history['loss'],'k', linewidth=2)
+    ax.plot(history.history['val_loss'],'r', linewidth=2)
+    ax.set_xlabel('Epochs', fontname="Arial", fontsize=14)
+    ax.set_ylabel('Mean squared error', fontname="Arial", fontsize=14)
+    ax.legend(['Training', 'Validation'], loc='upper left',prop={'size': 14})
+
+    for tick in ax.get_xticklabels():
+        tick.set_fontsize(14)
+    for tick in ax.get_yticklabels():
+        tick.set_fontsize(14)
+    plt.show()
+    
+    fig.savefig("training_results.png")
+
+    # Score del modelo entrenado
+    scores = model.evaluate(X_test, y_test, batch_size=batch_size)
+    print('Mean squared error, Test:', scores)
+
+
+    # Predictions on y_test
+    y_pred = model.predict(X_test)
+    
+    # Save the model as .h5
+    model.save("model_checkpoint.h5")
+
+    return y_pred
+
+
+
+
+
 
 def plot_results(y_test, y_pred, model_name, min_y, max_y):
     """
@@ -329,3 +438,168 @@ def plot_results(y_test, y_pred, model_name, min_y, max_y):
     plt.yticks(fontsize=20)
     
     return plt.show()
+
+
+
+def master_regression_algorithm(X_train, X_test, y_train, y_test,
+                                early_stopping_rounds,
+                                batch_size,
+                                epochs,
+                                patience,
+                                min_delta,
+                                min_y, max_y,
+                                columns_dataset):
+    """
+    
+
+    Parameters
+    ----------
+    X_train : TYPE
+        DESCRIPTION.
+    X_test : TYPE
+        DESCRIPTION.
+    y_train : TYPE
+        DESCRIPTION.
+    y_test : TYPE
+        DESCRIPTION.
+    early_stopping_rounds : TYPE
+        DESCRIPTION.
+    batch_size : TYPE
+        DESCRIPTION.
+    epochs : TYPE
+        DESCRIPTION.
+    patience : TYPE
+        DESCRIPTION.
+    min_delta : TYPE
+        DESCRIPTION.
+    min_y : TYPE
+        DESCRIPTION.
+    max_y : TYPE
+        DESCRIPTION.
+    columns_dataset : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    df_prediction : TYPE
+        DESCRIPTION.
+    df_mae_score : TYPE
+        DESCRIPTION.
+
+    """
+    
+
+    df_prediction = pd.DataFrame()
+    
+    mae_score = []
+    
+    # ============================================================
+    # Regression algorithm 
+    # ============================================================
+    
+    # Predictions of the linear regression
+    y_pred_regression =  linear_regression_processing(X_train, X_test,
+                                                      y_train, y_test)
+    # MAE of regression
+    mae_regression =\
+        mae_error_models(y_pred_regression, y_test, min_y, max_y)
+    # Standart deviation of error
+    std_mae_regression =\
+        std_mae_error(y_pred_regression, y_test, min_y, max_y)
+    
+    model_name = "Regression"
+    plot_results(y_test, y_pred_regression,
+                 model_name, min_y, max_y)
+    
+    df_prediction['regression_prediction'] = y_pred_regression
+
+    mae_score.append(['Regression',mae_regression])
+    
+    # ============================================================
+    # XGBoost model
+    # ============================================================
+    
+    # Mean absolute error and std of mae error of xgboost algorithm for y:test
+    y_pred_xgboost, feature_importance =\
+        xgboost_processing(X_train, X_test, y_train,
+                           y_test, early_stopping_rounds,
+                           columns_dataset)
+    
+    # MAE of xgboost algorithm
+    mae_xgboost =\
+        mae_error_models(y_pred_xgboost, y_test, min_y, max_y)
+    # Standart deviation of error
+    std_mae_xgboost =\
+        std_mae_error(y_pred_xgboost, y_test, min_y, max_y)
+    
+    # Plot results XGBoost
+    model_name = "XGboost"
+    plot_results(y_test, y_pred_xgboost, model_name, min_y, max_y)
+    
+    df_prediction['xgboost_prediction'] = y_pred_xgboost
+
+    mae_score.append(['XGboost',mae_xgboost])
+    
+    
+    # ============================================================
+    # Support vector regressor
+    # ============================================================
+    
+    y_pred_svr =\
+        support_vector_machines_processing(X_train, X_test, y_train, y_test)
+    
+    # MAE of SVR algorithm
+    mae_svr =\
+        mae_error_models(y_pred_svr, y_test, min_y, max_y)
+        
+    # Standard deviation of mae
+    std_mae_svr =\
+        std_mae_error(y_pred_svr, y_test, min_y, max_y)
+    
+    # Plot results SVR
+    model_name = "Support vector regressor"
+    plot_results(y_test, y_pred_svr, model_name, min_y, max_y)
+    
+    df_prediction['svr_prediction'] = y_pred_svr
+
+    mae_score.append(['Support'+'\n'+'vector'+'\n'+'regressor',mae_svr])
+    
+    # ============================================================
+    # Neural networks
+    # ============================================================
+    
+    y_pred_nn = neural_net_processing(X_train, X_test, y_train, y_test,
+                                      batch_size,
+                                      epochs,
+                                      patience,
+                                      min_delta)
+    
+    # MAE of Neural network
+    mae_nn =\
+        mae_error_models(y_pred_nn, y_test, min_y, max_y)
+        
+    # Standard deviation of mae
+    std_mae_nn =\
+        std_mae_error(y_pred_nn, y_test, min_y, max_y)
+    
+    # Plot results Neural networks
+    model_name = "Neural network"
+    plot_results(y_test, y_pred_nn, model_name, min_y, max_y)
+
+    df_prediction['nn_prediction'] = y_pred_nn
+    mae_score.append(['Neural'+'\n'+'network',mae_nn])
+    
+
+    # Dataframe with mean absolute errors
+    df_mae_score = pd.DataFrame(mae_score, columns=['Algorithm',
+                                                    'Mean absolute error'])
+
+    df_mae_score.plot.bar(x='Algorithm', y='Mean absolute error',
+                          rot=0, color='r')
+    
+    # Re-scale the predictions
+    df_prediction = df_prediction.apply(lambda x: x*(max_y-min_y)+min_y)
+    
+    return df_prediction, df_mae_score
+
+

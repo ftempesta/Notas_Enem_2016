@@ -97,10 +97,9 @@ dataset = labeL_encoder(dataset, categorical_columns)
 # Data preparation
 # ============================================================
 
-X = dataset_important
+X = dataset
 # Columns 
 columns_dataset = X.columns
-
 y = target["NU_NOTA_MT"]
 
 
@@ -124,125 +123,65 @@ X_train, X_test, y_train, y_test =\
     train_test_split(X, y, test_size=0.2, random_state=42)
 
 
-# ============================================================
-# Data preparation
-# ============================================================
-
-# Predictions of the linear regression
-y_pred_regression =  linear_regression_processing(X_train, X_test,
-                                                  y_train, y_test)
-# MAE of regression
-mae_regression =\
-    mae_error_models(y_pred_regression, y_test, min_y, max_y)
-# Standart deviation of error
-std_mae_regression =\
-    std_mae_error(y_pred_regression, y_test, min_y, max_y)
-
-model_name = "Regression"
-plot_results(y_test, y_pred_regression,
-             model_name, min_y, max_y)
-
-
-# ============================================================
-# XGBoost model
-# ============================================================
-
-# Number of steps on the boosting algorithm
+# XGboost hyperparameters
 early_stopping_rounds = 200
-
-# Mean absolute error and std of mae error of xgboost algorithm for y:test
-y_pred_xgboost, feature_importance =\
-    xgboost_processing(X_train, X_test, y_train,
-                       y_test, early_stopping_rounds,
-                       columns_dataset)
-
-# MAE of xgboost algorithm
-mae_xgboost =\
-    mae_error_models(y_pred_xgboost, y_test, min_y, max_y)
-# Standart deviation of error
-std_mae_xgboost =\
-    std_mae_error(y_pred_xgboost, y_test, min_y, max_y)
-
-# Plot results XGBoost
-model_name = "XGboost"
-plot_results(y_test, y_pred_xgboost, model_name, min_y, max_y)
-
+# Neural net hyperparameters
+batch_size = 256
+epochs = 40
+patience = 100
+min_delta = 0.5
 
 # ============================================================
-# Support vector regressor
+# Algoritm selection
 # ============================================================
 
-y_pred_svr =\
-    support_vector_machines_processing(X_train, X_test, y_train, y_test)
+df_prediction, df_mae_score =\
+    master_regression_algorithm(X_train, X_test, y_train, y_test,
+                                early_stopping_rounds, batch_size,
+                                epochs, patience, min_delta,
+                                min_y, max_y, columns_dataset)
 
-# MAE of SVR algorithm
-mae_svr =\
-    mae_error_models(y_pred_svr, y_test, min_y, max_y)
-    
-# Standard deviation of mae
-std_mae_svr =\
-    std_mae_error(y_pred_svr, y_test, min_y, max_y)
-
-# Plot results SVR
-model_name = "Support vector regressor"
-plot_results(y_test, y_pred_svr, model_name, min_y, max_y)
-
-
-# ============================================================
-# Neural networks
-# ============================================================
-
-def neural_net_processing():
-    
-    
-
-
-
-
-
-# Select the 30° most important columns
-
-feature_importance = feature_importance.iloc[:30]
-
-important_columns = (feature_importance["feature"]).to_list()
-
-# Calculate correlation just in features importante
-dataset_important = dataset[important_columns]
-
-correlation_feature_important =\
-    dataset_important.corr().unstack().\
-        sort_values().drop_duplicates().reset_index(drop=False)
-
-correlation_feature_important.columns = ["var1", "var2", "correlation"]
-
-correlation_feature_important =\
-    correlation_feature_important.sort_values(by=["correlation"],
-                                                      ascending=False).\
-    iloc[1:].reset_index(drop=True)
+y_test_rescaled = y_test*(max_y-min_y)+min_y
 
 
 
 
 
 
+# # Select the 30° most important columns
+
+# feature_importance = feature_importance.iloc[:30]
+
+# important_columns = (feature_importance["feature"]).to_list()
+
+# # Calculate correlation just in features importante
+# dataset_important = dataset[important_columns]
+
+# correlation_feature_important =\
+#     dataset_important.corr().unstack().\
+#         sort_values().drop_duplicates().reset_index(drop=False)
+
+# correlation_feature_important.columns = ["var1", "var2", "correlation"]
+
+# correlation_feature_important =\
+#     correlation_feature_important.sort_values(by=["correlation"],
+#                                                       ascending=False).\
+#     iloc[1:].reset_index(drop=True)
+
+# # Dataframe of correlation between columns (complete dataset)
+# correlation_columns =\
+#     dataset.corr().unstack().sort_values().\
+#         drop_duplicates().reset_index(drop=False)
+# correlation_columns.columns = ["var1", "var2", "correlation"]
+# correlation_columns = correlation_columns.sort_values(by=["correlation"],
+#                                                       ascending=False).\
+#     iloc[1:].reset_index(drop=True)
 
 
-
-
-# Dataframe of correlation between columns (complete dataset)
-correlation_columns =\
-    dataset.corr().unstack().sort_values().\
-        drop_duplicates().reset_index(drop=False)
-correlation_columns.columns = ["var1", "var2", "correlation"]
-correlation_columns = correlation_columns.sort_values(by=["correlation"],
-                                                      ascending=False).\
-    iloc[1:].reset_index(drop=True)
-
-
-# High correlation columns
-high_correlated_columns =\
-    correlation_columns[(correlation_columns['correlation'] > 0.25) |
-                        (correlation_columns['correlation'] < -0.25)]
+# # High correlation columns
+# high_correlated_columns =\
+#     correlation_columns[(correlation_columns['correlation'] > 0.25) |
+#                         (correlation_columns['correlation'] < -0.25)]
 
 
 
@@ -269,15 +208,6 @@ high_correlated_columns =\
 #                                             right_on =['feature']).dropna()
 
 
-# for ii in range(correlation_importance_selection.shape[0]):
-    
-#     var2 = correlation_importance_selection["var2"].iloc[ii]
-    
-#     for jj in range(len(important_columns)):
-#         features =(important_columns[jj]
-
-#         if features==var:
-#             print("variable repetida")
  
 
 # # Aplicar PCA para encontrar componentes principales
