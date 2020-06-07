@@ -56,7 +56,7 @@ def labeL_encoder(dataset, categorical_columns):
     return dataset
 
     
-def OneHotEncoder(dataset, categorical_columns):
+def one_hot_encoder(dataset, categorical_columns):
     """
     Convert categorical columns to a new columns with only 0 o 1 values
     
