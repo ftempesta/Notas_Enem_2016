@@ -11,40 +11,40 @@ Created on Sun Jun  7 23:06:40 2020
 # prediction_regression = prediction_regression*(max_y-min_y)+min_y
 
 
-# # Select the 30° most important columns
+# Select the 30° most important columns
 
-# feature_importance = feature_importance.iloc[:30]
+feature_importance = feature_importance.iloc[:30]
 
-# important_columns = (feature_importance["feature"]).to_list()
+important_columns = (feature_importance["feature"]).to_list()
 
-# # Calculate correlation just in features importante
-# dataset_important = dataset[important_columns]
+# Calculate correlation just in features importante
+dataset_important = dataset[important_columns]
 
-# correlation_feature_important =\
-#     dataset_important.corr().unstack().\
-#         sort_values().drop_duplicates().reset_index(drop=False)
+correlation_feature_important =\
+    dataset_important.corr().unstack().\
+        sort_values().drop_duplicates().reset_index(drop=False)
 
-# correlation_feature_important.columns = ["var1", "var2", "correlation"]
+correlation_feature_important.columns = ["var1", "var2", "correlation"]
 
-# correlation_feature_important =\
-#     correlation_feature_important.sort_values(by=["correlation"],
-#                                                       ascending=False).\
-#     iloc[1:].reset_index(drop=True)
+correlation_feature_important =\
+    correlation_feature_important.sort_values(by=["correlation"],
+                                                      ascending=False).\
+    iloc[1:].reset_index(drop=True)
 
-# # Dataframe of correlation between columns (complete dataset)
-# correlation_columns =\
-#     dataset.corr().unstack().sort_values().\
-#         drop_duplicates().reset_index(drop=False)
-# correlation_columns.columns = ["var1", "var2", "correlation"]
-# correlation_columns = correlation_columns.sort_values(by=["correlation"],
-#                                                       ascending=False).\
-#     iloc[1:].reset_index(drop=True)
+# Dataframe of correlation between columns (complete dataset)
+correlation_columns =\
+    dataset.corr().unstack().sort_values().\
+        drop_duplicates().reset_index(drop=False)
+correlation_columns.columns = ["var1", "var2", "correlation"]
+correlation_columns = correlation_columns.sort_values(by=["correlation"],
+                                                      ascending=False).\
+    iloc[1:].reset_index(drop=True)
 
 
-# # High correlation columns
-# high_correlated_columns =\
-#     correlation_columns[(correlation_columns['correlation'] > 0.25) |
-#                         (correlation_columns['correlation'] < -0.25)]
+# High correlation columns
+high_correlated_columns =\
+    correlation_columns[(correlation_columns['correlation'] > 0.25) |
+                        (correlation_columns['correlation'] < -0.25)]
 
 
 

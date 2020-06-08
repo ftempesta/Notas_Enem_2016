@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 
 
 
-def labeL_encoder(dataset, categorical_columns):
+def label_encoder(dataset, categorical_columns):
     """
     Function to convert categorical columns to numerical
     applying label encoder
@@ -62,6 +62,30 @@ def labeL_encoder(dataset, categorical_columns):
     output.close()
         
     return dataset
+
+
+def label_encoder_train_test(dataset, dataset_test, categorical_columns):
+
+    labelencoder = LabelEncoder()
+    
+    # Assigning numerical values and storing in another column
+    
+    for column in categorical_columns:
+        dataset[column] =\
+            labelencoder.fit_transform(dataset[column])
+
+        dataset_test[column] =\
+            labelencoder.fit_transform(dataset_test[column])
+    
+    #exporting the departure encoder
+    output = open('label_encoding.pkl', 'wb')
+    pickle.dump(labelencoder, output)
+    output.close()
+        
+    return dataset, dataset_test
+
+
+
 
     
 def one_hot_encoder(dataset, categorical_columns):
@@ -301,7 +325,7 @@ def support_vector_machines_processing(X_train, X_test, y_train, y_test):
     y_test = np.ravel(y_test)
     
     # Support vector machines regressor
-    regressor = SVR(kernel='rbf')
+    regressor = SVR(kernel='linear')
     
     # Train model
     regressor.fit(X_train,y_train)
