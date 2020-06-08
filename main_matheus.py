@@ -77,16 +77,20 @@ dataset = dataset_filtered.dropna()
 target = dataset[['NU_INSCRICAO','NU_NOTA_MT']]
 dataset = dataset.drop(columns=['NU_INSCRICAO','NU_NOTA_MT'])
 
+
 # ============================================================
 # Transform categorical to numeric
 # ============================================================
 
-#label_encoder_columns = ['TP_SEXO', 'NO_MUNICIPIO_RESIDENCIA', 
-#'NO_MUNICIPIO_PROVA']
 categorical_columns =\
      dataset.select_dtypes(include=['object']).columns.to_list()
 dataset = labeL_encoder(dataset, categorical_columns)
 
+
+dataset_filtered = labeL_encoder(dataset_filtered, categorical_columns)
+
+
+total_columns = dataset.columns.to_list()
 # # Select categorical columns
 # categorical_columns =\
 #     dataset.select_dtypes(include=['object']).columns.to_list()
@@ -96,8 +100,21 @@ dataset = labeL_encoder(dataset, categorical_columns)
 # ============================================================
 # Data preparation
 # ============================================================
+dataset = dataset.reset_index(drop=True)
+dataset_filtered = dataset_filtered.reset_index(drop=True)
+
+print(dataset_filtered.shape)
+print(dataset.shape)
+
+
+indices_list = dataset.index.to_list()
+
+train_indices, test_indices = train_test_split(indices_list, test_size=0.2,
+                                               random_state=40)
 
 X = dataset
+
+
 # Columns 
 columns_dataset = X.columns
 y = target["NU_NOTA_MT"]
@@ -118,16 +135,28 @@ min_y = min_y[0]
 max_y = sc_y.data_max_
 max_y = max_y[0]
 
-# Split datasets
-X_train, X_test, y_train, y_test =\
-    train_test_split(X, y, test_size=0.2, random_state=42)
+min_x = sc_X.data_min_
+min_x = min_x[0]
+max_x = sc_X.data_max_
+max_x = max_x[0]
+
+y_train = y[train_indices,:]
+y_test = y[test_indices,:]
+
+X_train = X[train_indices,:]
+X_test = X[test_indices,:]
 
 
+# # Split datasets
+# X_train, X_test, y_train, y_test =\
+#     train_test_split(X, y, test_size=0.2, random_state=42)
+
+ 
 # XGboost hyperparameters
 early_stopping_rounds = 200
 # Neural net hyperparameters
 batch_size = 256
-epochs = 40
+epochs = 30
 patience = 100
 min_delta = 0.5
 
@@ -141,7 +170,26 @@ df_prediction, df_mae_score =\
                                 epochs, patience, min_delta,
                                 min_y, max_y, columns_dataset)
 
+
+X_test = pd.DataFrame(X_test, columns=columns_dataset)
+X_test = X_test.apply(lambda x: x*(max_x-min_x)+min_x)
+
+
 y_test_rescaled = y_test*(max_y-min_y)+min_y
+y_test_rescaled = pd.DataFrame(y_test_rescaled, columns=["Resultados test"])
+
+
+inscription_number = dataset_filtered['NU_INSCRICAO']
+inscription_number = pd.DataFrame(inscription_number.iloc[test_indices]).reset_index()
+
+result = pd.concat([X_test, y_test_rescaled,inscription_number], axis=1)
+
+
+
+
+
+
+
 
 
 
