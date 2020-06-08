@@ -7,9 +7,11 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import xgboost
 import numpy as np
+import pickle 
+from statsmodels.regression.linear_model import OLSResults
 
 
-from codenation_library import *
+from codenation_library_matheus import *
 
 # ============================================================
 # Explorar datos
@@ -17,6 +19,13 @@ from codenation_library import *
 
 # Load_data
 dataset = pd.read_csv('testfiles/train.csv', index_col=0)
+dataset_test = pd.read_csv('testfiles/test.csv')
+
+columns_test = dataset_test.columns.to_list()
+columns_test.append('NU_NOTA_MT')
+
+dataset = dataset[columns_test]
+
 
 # Describe
 dims = dataset.shape
@@ -34,20 +43,20 @@ dataset = dataset.dropna(subset=['NU_NOTA_MT']).reset_index(drop=True)
 # Delete irrelevant columns 
 columns_dataset = dataset.columns.to_list()
 
-columns_to_delete = ['NU_ANO', 'CO_MUNICIPIO_RESIDENCIA',
-                     'SG_UF_RESIDENCIA', 'CO_MUNICIPIO_NASCIMENTO',
-                     'SG_UF_NASCIMENTO', 'CO_ESCOLA', 'CO_MUNICIPIO_ESC', 
-                     'SG_UF_ESC', 'SG_UF_ENTIDADE_CERTIFICACAO',
-                     'CO_MUNICIPIO_PROVA', 'SG_UF_PROVA', 'CO_PROVA_CN',
-                     'CO_PROVA_CH', 'CO_PROVA_LC', 'CO_PROVA_MT',
-                     'TX_RESPOSTAS_CN', 'TX_RESPOSTAS_CH', 'TX_RESPOSTAS_LC',
-                     'TX_RESPOSTAS_MT', 'TX_GABARITO_CN', 'TX_GABARITO_CH',
-                     'TX_GABARITO_LC', 'TX_GABARITO_MT', 'TP_STATUS_REDACAO',
-                     'NU_NOTA_COMP1', 'NU_NOTA_COMP2', 'NU_NOTA_COMP3',
-                     'NU_NOTA_COMP4', 'NU_NOTA_COMP5',
-                     'NO_MUNICIPIO_NASCIMENTO']
+# columns_to_delete = ['NU_ANO', 'CO_MUNICIPIO_RESIDENCIA',
+#                      'SG_UF_RESIDENCIA', 'CO_MUNICIPIO_NASCIMENTO',
+#                      'SG_UF_NASCIMENTO', 'CO_ESCOLA', 'CO_MUNICIPIO_ESC', 
+#                      'SG_UF_ESC', 'SG_UF_ENTIDADE_CERTIFICACAO',
+#                      'CO_MUNICIPIO_PROVA', 'SG_UF_PROVA', 'CO_PROVA_CN',
+#                      'CO_PROVA_CH', 'CO_PROVA_LC', 'CO_PROVA_MT',
+#                      'TX_RESPOSTAS_CN', 'TX_RESPOSTAS_CH', 'TX_RESPOSTAS_LC',
+#                      'TX_RESPOSTAS_MT', 'TX_GABARITO_CN', 'TX_GABARITO_CH',
+#                      'TX_GABARITO_LC', 'TX_GABARITO_MT', 'TP_STATUS_REDACAO',
+#                      'NU_NOTA_COMP1', 'NU_NOTA_COMP2', 'NU_NOTA_COMP3',
+#                      'NU_NOTA_COMP4', 'NU_NOTA_COMP5',
+#                      'NO_MUNICIPIO_NASCIMENTO']
 
-dataset = dataset.drop(columns=columns_to_delete)
+# dataset = dataset.drop(columns=columns_to_delete)
 
 # ============================================================
 # Eliminete columns with less than 50 % of the values
@@ -86,16 +95,10 @@ categorical_columns =\
      dataset.select_dtypes(include=['object']).columns.to_list()
 dataset = labeL_encoder(dataset, categorical_columns)
 
-
+# Apply label encoder
 dataset_filtered = labeL_encoder(dataset_filtered, categorical_columns)
-
-
 total_columns = dataset.columns.to_list()
-# # Select categorical columns
-# categorical_columns =\
-#     dataset.select_dtypes(include=['object']).columns.to_list()
-# # Convert categorical columns into numerical column
-# dataset = one_hot_encoder(dataset, categorical_columns)
+
 
 # ============================================================
 # Data preparation
@@ -109,8 +112,7 @@ print(dataset.shape)
 
 indices_list = dataset.index.to_list()
 
-train_indices, test_indices = train_test_split(indices_list, test_size=0.2,
-                                               random_state=40)
+train_indices, test_indices = train_test_split(indices_list, test_size=0.2)
 
 X = dataset
 
@@ -147,16 +149,12 @@ X_train = X[train_indices,:]
 X_test = X[test_indices,:]
 
 
-# # Split datasets
-# X_train, X_test, y_train, y_test =\
-#     train_test_split(X, y, test_size=0.2, random_state=42)
-
- 
 # XGboost hyperparameters
 early_stopping_rounds = 200
+
 # Neural net hyperparameters
 batch_size = 256
-epochs = 30
+epochs = 40
 patience = 100
 min_delta = 0.5
 
@@ -164,7 +162,7 @@ min_delta = 0.5
 # Algoritm selection
 # ============================================================
 
-df_prediction, df_mae_score =\
+df_prediction, df_mae_score, regression, xgboost, svr, nn =\
     master_regression_algorithm(X_train, X_test, y_train, y_test,
                                 early_stopping_rounds, batch_size,
                                 epochs, patience, min_delta,
@@ -185,9 +183,91 @@ inscription_number = pd.DataFrame(inscription_number.iloc[test_indices]).reset_i
 result = pd.concat([X_test, y_test_rescaled,inscription_number], axis=1)
 
 
+# ============================================================
+# Apply to test set
+# ============================================================
+
+columns_test = X_test.columns.to_list()
+
+dataset_final_test = dataset_test[columns_test].reset_index(drop=True)
+inscription_number_test = pd.DataFrame(dataset_test['NU_INSCRICAO'])
+
+
+pkl_file = open('label_encoding.pkl', 'rb')
+label_encoder = pickle.load(pkl_file) 
+pkl_file.close()
+
+
+for column in categorical_columns:
+    dataset_final_test[column] =\
+        label_encoder.fit_transform(dataset_final_test[column])
+
+dataset_final_test = dataset_final_test.reset_index(drop=True)
+dataset_final_test = dataset_final_test.fillna(dataset_final_test.mean())
+
+# Regression
+
+X_final_test = dataset_final_test
+# Normalize features 
+X_final_test = sc_X.fit_transform(X_final_test)
+
+
+# XGBoost
+xgboost = pickle.load(open("xgboost.pickle.dat", "rb"))
+# make predictions for test data
+predictions_xgboost = xgboost.predict(X_final_test)
+predictions_xgboost = predictions_xgboost*(max_y-min_y)+min_y
+predictions_xgboost = pd.DataFrame(predictions_xgboost)
+# SVR
+predictions_svr = svr.predict(X_final_test)
+predictions_svr = predictions_svr*(max_y-min_y)+min_y
+predictions_svr = pd.DataFrame(predictions_svr)
+
+# Neural net
+prediction_nn = nn.predict(X_final_test)
+prediction_nn = prediction_nn*(max_y-min_y)+min_y
+prediction_nn = pd.DataFrame(prediction_nn)
+
+
+resultados_finales =\
+    pd.concat([inscription_number_test, 
+               predictions_xgboost, predictions_svr, prediction_nn], axis=1)
+
+resultados_finales.columns = ["NU_INSCRICAO", "xgboost", "svr", "nn"]
+
+
+csv1 = resultados_finales[["NU_INSCRICAO", "xgboost"]]
+csv1.columns = ["NU_INSCRICAO", "NU_NOTA_MT"]
+
+csv = csv1[csv1['NU_NOTA_MT']<=1000].mean()[0]
+
+
+for value in range(csv1.shape[0]):
+    
+    nota_i = csv1['NU_NOTA_MT'].iloc[value]
+    
+    if nota_i >= 1000:
+        
+        csv1['NU_NOTA_MT'].iloc[value] = csv
+        
 
 
 
+csv1.to_csv('answer.csv', index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+# prediction_regression = regression.predict(X_final_test)
+# prediction_regression = prediction_regression*(max_y-min_y)+min_y
 
 
 
